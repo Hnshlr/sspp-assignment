@@ -1,0 +1,24 @@
+#!/bin/bash
+
+#PBS -N omp
+
+#PBS -l select=2:ncpus=16:mpiprocs=16
+
+##PBS -q gpu
+
+#PBS -m abe 
+#PBS -M hans.haller.885@cranfield.ac.uk
+
+#PBS -j oe
+#PBS -W sandbox=PRIVATE
+#PBS -k n
+ln -s $PWD $PBS_O_WORKDIR/$PBS_JOBID
+
+cd $PBS_O_WORKDIR
+
+export cpus=`cat $PBS_NODEFILE | wc -l`
+
+export OMP_NUM_THREADS=$cpus
+/scratch/s388885/sspp/sspp-exercises/a.out /scratch/s388885/sspp/sspp-assignment/src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx CSR
+
+/bin/rm -f ./$PBS_JOBID
