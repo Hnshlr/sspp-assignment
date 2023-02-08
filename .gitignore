@@ -34,3 +34,5 @@
 # Project
 cmake-build-debug/
 .idea/
+examples/
+src/data
