@@ -89,11 +89,11 @@ double** build_matrix(int M, int N, int nz, const int *I, const int *J, const do
 
 int main(int argc, char *argv[]) {
     //// DEBUG PURPOSES:
-    char* path_cage4 = "../src/data/input/cage4/cage4.mtx";
-    char* path_cubecoup = "../src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx";
-    argc+=2;                    // TEMP
-    argv[1] = path_cubecoup;       // TEMP
-    argv[2] = "CSR";            // TEMP
+//    char* path_cage4 = "../src/data/input/cage4/cage4.mtx";
+//    char* path_cubecoup = "../src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx";
+//    argc+=2;                        // TEMP
+//    argv[1] = path_cubecoup;        // TEMP
+//    argv[2] = "ELLPACK";            // TEMP
     //// END OF DEBUG PURPOSES.
 
     // MATRIX SETTINGS:
@@ -215,6 +215,62 @@ int main(int argc, char *argv[]) {
                 }
                 csr_result[i] = sum;
             }
+            // STOP TIMER(S):
+            double end = omp_get_wtime();
+
+            // MEASUREMENTS:
+            double gflops = 2.0 * nz / ((end - start) * 1e9);
+            printf("RESULTS = { TIME=%fs, THREADS=%d, CHUNK_SIZE=%d, GFLOPS=%f }\n", end - start, omp_get_max_threads(), chunk_size, gflops);
+        }
+    return 0;
+    }
+
+    // CONVERT THE MATRIX TO ELLPACK FORMAT:
+    if (optype == "ellpack") {
+        int max_row_length = 0;
+        int* max_row_lengths = (int*) malloc(M * sizeof(int));
+        // Find the maximum row length, which is the max number of non-zero elements in a row, using I, J and val; sorted by J:
+        for (int i = 0; i < nz; i++) {
+            max_row_lengths[I[i]]++;
+        }
+        for (int i = 0; i < M; i++) {
+            if (max_row_lengths[i] > max_row_length) {
+                max_row_length = max_row_lengths[i];
+            }
+        }
+        int **JA = (int **) malloc(M * sizeof(int *));
+        for (int i = 0; i < M; i++) {
+            JA[i] = (int *) malloc(max_row_length * sizeof(int));
+        }
+        auto **AS = (double **) malloc(M * sizeof(double *));
+        for (int i = 0; i < M; i++) {
+            AS[i] = (double *) malloc(max_row_length * sizeof(double));
+        }
+        int *row_fill = (int *) malloc(M * sizeof(int));
+        int row, col;
+        for (int i = 0; i < nz; i++) {
+            row = I[i];
+            col = J[i];
+            JA[row][row_fill[row]] = col;
+            AS[row][row_fill[row]] = val[i];
+            row_fill[row]++;
+        }
+        std::vector<int> chunk_sizes = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+        for (int chunk_size : chunk_sizes) {
+            // ALLOCATE MEMORY FOR THE RESULT, ROWS AND COLS:
+            auto *ellpack_result = (double *) malloc(M * sizeof(double));
+            int row, col;
+            // PARALLEL TIMER START:
+            double start = omp_get_wtime();
+#pragma omp parallel for schedule(static, chunk_size) default(none) shared(M, N, nz, max_row_length, JA, AS, vector, ellpack_result, chunk_size) private(row, col)
+            for (int i = 0; i < M; i++) {
+                double sum = 0;
+                for (int j = 0; j < max_row_length; j++) {
+                    sum = sum + AS[i][j] * vector[JA[i][j]];
+                }
+                ellpack_result[i] = sum;
+            }
+
             // STOP TIMER(S):
             double end = omp_get_wtime();
 
