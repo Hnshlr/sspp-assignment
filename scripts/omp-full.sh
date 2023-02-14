@@ -1,0 +1,1 @@
+cd /scratch/s388885/sspp/sspp-assignment && ./scripts/omp-compile.sh && cd jobs && qsub ../queues/omp.sub && clear && qstat -a && ls
