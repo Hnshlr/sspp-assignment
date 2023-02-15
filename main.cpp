@@ -559,13 +559,13 @@ int main(int argc, char *argv[]) {
                 col = 0;
                 // PARALLEL TIMER START:
                 start = omp_get_wtime();
-#pragma omp parallel for schedule(static, chunk_size) default(none) shared(M, N, nz, max_row_length, JA, AS, vector, ellpack_result, chunk_size) private(row, col)
-                for (int i = 0; i < M; i++) {
+#pragma omp parallel for schedule(static, chunk_size) default(none) shared(M, N, nz, max_row_length, max_row_lengths, JA, AS, vector, ellpack_result, chunk_size) private(row, col)
+                for (row = 0; row < M; row++) {
                     double sum = 0;
-                    for (int j = 0; j < max_row_length; j++) {
-                        sum = sum + AS[i][j] * vector[JA[i][j]];
+                    for (int j = 0; j < max_row_lengths[row]; j++) {
+                        sum = sum + AS[row][j] * vector[JA[row][j]];
                     }
-                    ellpack_result[i] = sum;
+                    ellpack_result[row] = sum;
                 }
 
                 // STOP TIMER(S):

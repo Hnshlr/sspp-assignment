@@ -23,8 +23,10 @@ module load CMake/3.15.3-GCCcore-8.3.0
 export CXX=$(which g++)
 
 export OMP_NUM_THREADS=16
-itr = 10
-for k in `seq 1 $itr`
+
+for k in 1 2 3 4
 do
     /scratch/s388885/sspp/sspp-assignment/a.out /scratch/s388885/sspp/sspp-assignment/src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx ALL
 done
+
+#
