@@ -3,6 +3,7 @@
 
 #include "src/mmio.h"
 
+//// TEMP: DEBUG PURPOSES FUNCTIONS:
 void print_list(int nz, int *I, int *J, double *val) {
     int i;
     for (i=0; i<nz; i++) {
@@ -83,6 +84,7 @@ double** build_matrix(int M, int N, int nz, const int *I, const int *J, const do
     }
     return matrix;
 }
+//// END OF TEMP: DEBUG PURPOSES FUNCTIONS.
 
 // RUN FRONTEND: ./a.out "src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx" "CSR"
 
@@ -295,7 +297,7 @@ int main(int argc, char *argv[]) {
                omp_get_max_threads(), bestChunkSize, gflops);
 
 
-        // METHOD 3: BLOCK UNROLLING 2:
+        // METHOD 3: UNROLLING 2:
         bestTimeAfter10Trials = 1000000;
         for (int i = 0; i < 10; i++) {
             // ALLOCATE MEMORY FOR THE RESULT, ROWS AND COLS:
@@ -339,7 +341,7 @@ int main(int argc, char *argv[]) {
                omp_get_max_threads(), gflops);
 
 
-        // METHOD 4: BLOCK UNROLLING 4:
+        // METHOD 4: UNROLLING 4:
         bestTimeAfter10Trials = 1000000;
         for (int i = 0; i < 10; i++) {
             // ALLOCATE MEMORY FOR THE RESULT, ROWS AND COLS:
@@ -393,7 +395,7 @@ int main(int argc, char *argv[]) {
                omp_get_max_threads(), gflops);
 
 
-        // METHOD 5: BLOCK UNROLLING 8:
+        // METHOD 5: UNROLLING 8:
         bestTimeAfter10Trials = 1000000;
         for (int i = 0; i < 10; i++) {
             // ALLOCATE MEMORY FOR THE RESULT, ROWS AND COLS:
@@ -523,10 +525,10 @@ int main(int argc, char *argv[]) {
             col = 0;
             // PARALLEL TIMER START:
             start = omp_get_wtime();
-#pragma omp parallel for default(none) shared(M, max_row_length, JA, AS, vector, ellpack_result)
+#pragma omp parallel for default(none) shared(M, max_row_length, max_row_lengths, JA, AS, vector, ellpack_result)
             for (row = 0; row < M; row++) {
                 double sum = 0;
-                for (int j = 0; j < max_row_length; j++) {
+                for (int j = 0; j < max_row_lengths[row]; j++) {
                     sum = sum + AS[row][j] * vector[JA[row][j]];
                 }
                 ellpack_result[row] = sum;
@@ -595,11 +597,11 @@ int main(int argc, char *argv[]) {
             col = 0;
             // PARALLEL TIMER START:
             start = omp_get_wtime();
-#pragma omp parallel for default(none) shared(M, N, nz, max_row_length, JA, AS, vector, ellpack_result) private(row, col)
+#pragma omp parallel for default(none) shared(M, N, nz, max_row_length, max_row_lengths, JA, AS, vector, ellpack_result) private(row, col)
             for (row = 0; row < M - M % 2; row += 2) {
                 double sum1 = 0;
                 double sum2 = 0;
-                for (int j = 0; j < max_row_length; j++) {
+                for (int j = 0; j < max_row_lengths[row]; j++) {
                     sum1 = sum1 + AS[row][j] * vector[JA[row][j]];
                     sum2 = sum2 + AS[row + 1][j] * vector[JA[row + 1][j]];
                 }
@@ -608,14 +610,14 @@ int main(int argc, char *argv[]) {
             }
             for (row = M - M % 2; row < M; row++) {
                 double sum = 0;
-                for (int j = 0; j < max_row_length; j++) {
+                for (int j = 0; j < max_row_lengths[row]; j++) {
                     sum = sum + AS[row][j] * vector[JA[row][j]];
                 }
                 ellpack_result[row] = sum;
             }
 
             // STOP TIMER(S):
-            double end = omp_get_wtime();
+            end = omp_get_wtime();
             // TAKE THE BEST TIME AFTER 10 TRIALS:
             if (end - start < bestTimeAfter10Trials) {
                 bestTimeAfter10Trials = end - start;
@@ -637,13 +639,13 @@ int main(int argc, char *argv[]) {
             col = 0;
             // PARALLEL TIMER START:
             start = omp_get_wtime();
-#pragma omp parallel for default(none) shared(M, N, nz, max_row_length, JA, AS, vector, ellpack_result) private(row, col)
+#pragma omp parallel for default(none) shared(M, N, nz, max_row_length, max_row_lengths, JA, AS, vector, ellpack_result) private(row, col)
             for (row = 0; row < M - M % 4; row += 4) {
                 double sum1 = 0;
                 double sum2 = 0;
                 double sum3 = 0;
                 double sum4 = 0;
-                for (int j = 0; j < max_row_length; j++) {
+                for (int j = 0; j < max_row_lengths[row]; j++) {
                     sum1 = sum1 + AS[row][j] * vector[JA[row][j]];
                     sum2 = sum2 + AS[row + 1][j] * vector[JA[row + 1][j]];
                     sum3 = sum3 + AS[row + 2][j] * vector[JA[row + 2][j]];
@@ -656,14 +658,14 @@ int main(int argc, char *argv[]) {
             }
             for (row = M - M % 4; row < M; row++) {
                 double sum = 0;
-                for (int j = 0; j < max_row_length; j++) {
+                for (int j = 0; j < max_row_lengths[row]; j++) {
                     sum = sum + AS[row][j] * vector[JA[row][j]];
                 }
                 ellpack_result[row] = sum;
             }
 
             // STOP TIMER(S):
-            double end = omp_get_wtime();
+            end = omp_get_wtime();
             // TAKE THE BEST TIME AFTER 10 TRIALS:
             if (end - start < bestTimeAfter10Trials) {
                 bestTimeAfter10Trials = end - start;
@@ -684,8 +686,8 @@ int main(int argc, char *argv[]) {
             row = 0;
             col = 0;
             // PARALLEL TIMER START:
-            double start = omp_get_wtime();
-#pragma omp parallel for default(none) shared(M, N, nz, max_row_length, JA, AS, vector, ellpack_result) private(row, col)
+            start = omp_get_wtime();
+#pragma omp parallel for default(none) shared(M, N, nz, max_row_length, max_row_lengths, JA, AS, vector, ellpack_result) private(row, col)
             for (row = 0; row < M - M % 8; row += 8) {
                 double sum1 = 0;
                 double sum2 = 0;
@@ -695,7 +697,7 @@ int main(int argc, char *argv[]) {
                 double sum6 = 0;
                 double sum7 = 0;
                 double sum8 = 0;
-                for (int j = 0; j < max_row_length; j++) {
+                for (int j = 0; j < max_row_lengths[row]; j++) {
                     sum1 = sum1 + AS[row][j] * vector[JA[row][j]];
                     sum2 = sum2 + AS[row + 1][j] * vector[JA[row + 1][j]];
                     sum3 = sum3 + AS[row + 2][j] * vector[JA[row + 2][j]];
@@ -716,7 +718,7 @@ int main(int argc, char *argv[]) {
             }
             for (row = M - M % 8; row < M; row++) {
                 double sum = 0;
-                for (int j = 0; j < max_row_length; j++) {
+                for (int j = 0; j < max_row_lengths[row]; j++) {
                     sum = sum + AS[row][j] * vector[JA[row][j]];
                 }
                 ellpack_result[row] = sum;
