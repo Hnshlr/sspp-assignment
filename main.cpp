@@ -1,5 +1,6 @@
 #include <omp.h>
 #include <random>
+#include <tuple>
 
 #include "src/mmio.h"
 
@@ -118,11 +119,11 @@ std::tuple<double, double> maxAndRelDiffs(const double *result1, const double *r
 
 int main(int argc, char *argv[]) {
     //// DEBUG PURPOSES:
-    char* path_cage4 = "../src/data/input/cage4/cage4.mtx";
-    char* path_cubecoup = "../src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx";
-    argc+=2;                        // TEMP
-    argv[1] = path_cubecoup;        // TEMP
-    argv[2] = "ELLPACK";            // TEMP
+//    char* path_cage4 = "../src/data/input/cage4/cage4.mtx";
+//    char* path_cubecoup = "../src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx";
+//    argc+=2;                        // TEMP
+//    argv[1] = path_cubecoup;        // TEMP
+//    argv[2] = "ALL";            // TEMP
     //// END OF DEBUG PURPOSES.
 
     // MATRIX SETTINGS:
@@ -782,7 +783,8 @@ int main(int argc, char *argv[]) {
         gflops = 2.0 * nz / (bestTimeAfter10Trials * 1e9);
         std::tuple<double, double> maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
         printf("RESULTS = { METHOD=parallel, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
-               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff), std::get<1>(maxAndRelDiff));
+               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff),
+               std::get<1>(maxAndRelDiff));
 
         // METHOD 2: CHUNKS:
         std::vector<int> chunk_sizes = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
@@ -823,7 +825,8 @@ int main(int argc, char *argv[]) {
         gflops = 2.0 * nz / (bestTime * 1e9);
         maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
         printf("RESULTS = { METHOD=chunks, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, CHUNK_SIZE(BEST)=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
-               bestTime, omp_get_max_threads(), bestChunkSize, gflops, std::get<0>(maxAndRelDiff), std::get<1>(maxAndRelDiff));
+               bestTime, omp_get_max_threads(), bestChunkSize, gflops, std::get<0>(maxAndRelDiff),
+               std::get<1>(maxAndRelDiff));
 
         // METHOD 3: UNROLL-2:
         bestTimeAfter10Trials = 1000000;
@@ -865,7 +868,8 @@ int main(int argc, char *argv[]) {
         gflops = 2.0 * nz / (bestTimeAfter10Trials * 1e9);
         maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
         printf("RESULTS = { METHOD=unroll-2, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
-               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff), std::get<1>(maxAndRelDiff));
+               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff),
+               std::get<1>(maxAndRelDiff));
 
         // METHOD 4: UNROLL-4:
         bestTimeAfter10Trials = 1000000;
@@ -913,7 +917,8 @@ int main(int argc, char *argv[]) {
         gflops = 2.0 * nz / (bestTimeAfter10Trials * 1e9);
         maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
         printf("RESULTS = { METHOD=unroll-4, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
-               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff), std::get<1>(maxAndRelDiff));
+               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff),
+               std::get<1>(maxAndRelDiff));
 
         // METHOD 4: UNROLL-8:
         bestTimeAfter10Trials = 1000000;
@@ -973,10 +978,10 @@ int main(int argc, char *argv[]) {
         gflops = 2.0 * nz / (bestTimeAfter10Trials * 1e9);
         maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
         printf("RESULTS = { METHOD=unroll-8, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
-               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff), std::get<1>(maxAndRelDiff));
+               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff),
+               std::get<1>(maxAndRelDiff));
 
-        // TODO: Fix the max_diff and rel_diff for the unroll-8 method, which are different than 0.
-        // METHOD 5: BLOCK UNROLL-4:
+        // METHOD 5: BLOCK UNROLL-4 (2x2):
         bestTimeAfter10Trials = 1000000;
         for (int i = 0; i < 10; i++) {
             // ALLOCATE MEMORY FOR THE RESULT, ROWS AND COLS:
@@ -991,7 +996,8 @@ int main(int argc, char *argv[]) {
                 double sum2 = 0;
                 for (col = 0; col < max_row_length - max_row_length % 2; col += 2) {
                     sum1 += AS[row][col] * vector[JA[row][col]] + AS[row][col + 1] * vector[JA[row][col + 1]];
-                    sum2 += AS[row + 1][col] * vector[JA[row + 1][col]] + AS[row + 1][col + 1] * vector[JA[row + 1][col + 1]];
+                    sum2 += AS[row + 1][col] * vector[JA[row + 1][col]] +
+                            AS[row + 1][col + 1] * vector[JA[row + 1][col + 1]];
                 }
                 for (col = max_row_length - max_row_length % 2; col < max_row_length; col++) {
                     sum1 += AS[row][col] * vector[JA[row][col]];
@@ -1024,9 +1030,136 @@ int main(int argc, char *argv[]) {
         gflops = 2.0 * nz / (bestTimeAfter10Trials * 1e9);
         maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
         printf("RESULTS = { METHOD=b_unroll-4, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
-               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff), std::get<1>(maxAndRelDiff));
+               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff),
+               std::get<1>(maxAndRelDiff));
 
+        // METHOD 6: BLOCK UNROLL-8 (2x4):
+        bestTimeAfter10Trials = 1000000;
+        for (int i = 0; i < 10; i++) {
+            // ALLOCATE MEMORY FOR THE RESULT, ROWS AND COLS:
+            ellpack_result = (double *) malloc(M * sizeof(double));
+            row = 0;
+            col = 0;
+            // PARALLEL TIMER START:
+            start = omp_get_wtime();
+#pragma omp parallel for default(none) shared(M, N, nz, max_row_length, max_row_lengths, JA, AS, vector, ellpack_result) private(row, col)
+            for (row = 0; row < M - M % 2; row += 2) {
+                double sum1 = 0;
+                double sum2 = 0;
+                for (col = 0; col < max_row_length - max_row_length % 4; col += 4) {
+                    sum1 += AS[row][col] * vector[JA[row][col]] + AS[row][col + 1] * vector[JA[row][col + 1]] +
+                            AS[row][col + 2] * vector[JA[row][col + 2]] + AS[row][col + 3] * vector[JA[row][col + 3]];
+                    sum2 += AS[row + 1][col] * vector[JA[row + 1][col]] +
+                            AS[row + 1][col + 1] * vector[JA[row + 1][col + 1]] +
+                            AS[row + 1][col + 2] * vector[JA[row + 1][col + 2]] +
+                            AS[row + 1][col + 3] * vector[JA[row + 1][col + 3]];
+                }
+                for (col = max_row_length - max_row_length % 4; col < max_row_length; col++) {
+                    sum1 += AS[row][col] * vector[JA[row][col]];
+                    sum2 += AS[row + 1][col] * vector[JA[row + 1][col]];
+                }
+                ellpack_result[row] = sum1;
+                ellpack_result[row + 1] = sum2;
+            }
+            // HANDLE THE REMAINING ROWS:
+            for (row = M - M % 2; row < M; row++) {
+                double sum = 0;
+                for (col = 0; col < max_row_lengths[row] - max_row_lengths[row] % 4; col += 4) {
+                    sum += AS[row][col] * vector[JA[row][col]] + AS[row][col + 1] * vector[JA[row][col + 1]] +
+                           AS[row][col + 2] * vector[JA[row][col + 2]] + AS[row][col + 3] * vector[JA[row][col + 3]];
+                }
+                for (col = max_row_lengths[row] - max_row_lengths[row] % 4; col < max_row_lengths[row]; col++) {
+                    sum += AS[row][col] * vector[JA[row][col]];
+                }
+                ellpack_result[row] = sum;
+            }
+
+            // STOP TIMER(S):
+            end = omp_get_wtime();
+            // TAKE THE BEST TIME AFTER 10 TRIALS:
+            if (end - start < bestTimeAfter10Trials) {
+                bestTimeAfter10Trials = end - start;
+            }
+        }
+
+        // MEASUREMENTS:
+        gflops = 2.0 * nz / (bestTimeAfter10Trials * 1e9);
+        maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
+        printf("RESULTS = { METHOD=b_unroll-8, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
+               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff),
+               std::get<1>(maxAndRelDiff));
+
+        // METHOD 7: BLOCK UNROLL-16 (4x4):
+        bestTimeAfter10Trials = 1000000;
+        for (int i = 0; i < 10; i++) {
+            // ALLOCATE MEMORY FOR THE RESULT, ROWS AND COLS:
+            ellpack_result = (double *) malloc(M * sizeof(double));
+            row = 0;
+            col = 0;
+            // PARALLEL TIMER START:
+            start = omp_get_wtime();
+#pragma omp parallel for default(none) shared(M, N, nz, max_row_length, max_row_lengths, JA, AS, vector, ellpack_result) private(row, col)
+            for (row = 0; row < M - M % 4; row += 4) {
+                double sum1 = 0;
+                double sum2 = 0;
+                double sum3 = 0;
+                double sum4 = 0;
+                for (col = 0; col < max_row_length - max_row_length % 4; col += 4) {
+                    sum1 += AS[row][col] * vector[JA[row][col]] + AS[row][col + 1] * vector[JA[row][col + 1]] +
+                            AS[row][col + 2] * vector[JA[row][col + 2]] + AS[row][col + 3] * vector[JA[row][col + 3]];
+                    sum2 += AS[row + 1][col] * vector[JA[row + 1][col]] +
+                            AS[row + 1][col + 1] * vector[JA[row + 1][col + 1]] +
+                            AS[row + 1][col + 2] * vector[JA[row + 1][col + 2]] +
+                            AS[row + 1][col + 3] * vector[JA[row + 1][col + 3]];
+                    sum3 += AS[row + 2][col] * vector[JA[row + 2][col]] +
+                            AS[row + 2][col + 1] * vector[JA[row + 2][col + 1]] +
+                            AS[row + 2][col + 2] * vector[JA[row + 2][col + 2]] +
+                            AS[row + 2][col + 3] * vector[JA[row + 2][col + 3]];
+                    sum4 += AS[row + 3][col] * vector[JA[row + 3][col]] +
+                            AS[row + 3][col + 1] * vector[JA[row + 3][col + 1]] +
+                            AS[row + 3][col + 2] * vector[JA[row + 3][col + 2]] +
+                            AS[row + 3][col + 3] * vector[JA[row + 3][col + 3]];
+                }
+                for (col = max_row_length - max_row_length % 4; col < max_row_length; col++) {
+                    sum1 += AS[row][col] * vector[JA[row][col]];
+                    sum2 += AS[row + 1][col] * vector[JA[row + 1][col]];
+                    sum3 += AS[row + 2][col] * vector[JA[row + 2][col]];
+                    sum4 += AS[row + 3][col] * vector[JA[row + 3][col]];
+                }
+                ellpack_result[row] = sum1;
+                ellpack_result[row + 1] = sum2;
+                ellpack_result[row + 2] = sum3;
+                ellpack_result[row + 3] = sum4;
+            }
+            // HANDLE THE REMAINING ROWS:
+            for (row = M - M % 4; row < M; row++) {
+                double sum = 0;
+                for (col = 0; col < max_row_lengths[row] - max_row_lengths[row] % 4; col += 4) {
+                    sum += AS[row][col] * vector[JA[row][col]] + AS[row][col + 1] * vector[JA[row][col + 1]] +
+                           AS[row][col + 2] * vector[JA[row][col + 2]] + AS[row][col + 3] * vector[JA[row][col + 3]];
+                }
+                for (col = max_row_lengths[row] - max_row_lengths[row] % 4; col < max_row_lengths[row]; col++) {
+                    sum += AS[row][col] * vector[JA[row][col]];
+                }
+                ellpack_result[row] = sum;
+            }
+
+            // STOP TIMER(S):
+            end = omp_get_wtime();
+            // TAKE THE BEST TIME AFTER 10 TRIALS:
+            if (end - start < bestTimeAfter10Trials) {
+                bestTimeAfter10Trials = end - start;
+            }
+        }
+
+        // MEASUREMENTS:
+        gflops = 2.0 * nz / (bestTimeAfter10Trials * 1e9);
+        maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
+        printf("RESULTS = { METHOD=b_unroll-16, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
+               bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff),
+               std::get<1>(maxAndRelDiff));
     }
 
+    // EXIT:
     return 0;
 }
