@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
     char* path_cubecoup = "../src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx";
     argc+=2;                        // TEMP
     argv[1] = path_cubecoup;        // TEMP
-    argv[2] = "ALL";            // TEMP
+    argv[2] = "ELLPACK";            // TEMP
     //// END OF DEBUG PURPOSES.
 
     // MATRIX SETTINGS:
@@ -699,10 +699,7 @@ int main(int argc, char *argv[]) {
         maxAndRelDiff = maxAndRelDiffs(serial_csr_result, csr_result, M);
         printf("RESULTS = { METHOD=b_unroll-16, FORMAT=CSR, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
                bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff), std::get<1>(maxAndRelDiff));
-
     }
-
-
 
     // CONVERT THE MATRIX TO ELLPACK FORMAT:
     if (optype == "ellpack" || optype == "all") {
@@ -786,7 +783,6 @@ int main(int argc, char *argv[]) {
         std::tuple<double, double> maxAndRelDiff = maxAndRelDiffs(serial_ellpack_result, ellpack_result, M);
         printf("RESULTS = { METHOD=parallel, FORMAT=ELLPACK, BEST_TIME(10)=%fs, THREADS=%d, GFLOPS=%f, MAX_DIFF=%f, REL_DIFF=%f }\n",
                bestTimeAfter10Trials, omp_get_max_threads(), gflops, std::get<0>(maxAndRelDiff), std::get<1>(maxAndRelDiff));
-
 
         // METHOD 2: CHUNKS:
         std::vector<int> chunk_sizes = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
@@ -1007,8 +1003,11 @@ int main(int argc, char *argv[]) {
             // HANDLE THE REMAINING ROWS:
             for (row = M - M % 2; row < M; row++) {
                 double sum = 0;
-                for (int j = 0; j < max_row_lengths[row]; j++) {
-                    sum = sum + AS[row][j] * vector[JA[row][j]];
+                for (col = 0; col < max_row_lengths[row] - max_row_lengths[row] % 2; col += 2) {
+                    sum += AS[row][col] * vector[JA[row][col]] + AS[row][col + 1] * vector[JA[row][col + 1]];
+                }
+                for (col = max_row_lengths[row] - max_row_lengths[row] % 2; col < max_row_lengths[row]; col++) {
+                    sum += AS[row][col] * vector[JA[row][col]];
                 }
                 ellpack_result[row] = sum;
             }
