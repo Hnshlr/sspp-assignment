@@ -88,11 +88,14 @@ int main(int argc, char *argv[]) {
     // READ THE SPARSE MATRIX, AND REMOVE THE REMAINING ZEROES:
     int lineCounter = 0;
     while (fscanf(f, "%d %d %lg\n", &I[lineCounter], &J[lineCounter], &val[lineCounter]) != EOF) {
-        if (val[lineCounter] != 0) {
-            I[lineCounter]--;  /* adjust from 1-based to 0-based */
-            J[lineCounter]--;
-            lineCounter++;
-        }
+//        if (val[lineCounter] != 0) {
+//            I[lineCounter]--;  /* adjust from 1-based to 0-based */
+//            J[lineCounter]--;
+//            lineCounter++;
+//        } // TODO: Fix to remove non-zeroes elements.
+        I[lineCounter]--;  /* adjust from 1-based to 0-based */
+        J[lineCounter]--;
+        lineCounter++;
     }
     nz = lineCounter;
     I = (int *) realloc(I, 2*nz * sizeof(int));
