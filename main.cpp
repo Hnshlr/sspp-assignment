@@ -141,6 +141,9 @@ int main(int argc, char *argv[]) {
         int *IRP = (int *) malloc((M + 1) * sizeof(int));
         int *JA = (int *) malloc(nz * sizeof(int));
         auto *AS = (double *) malloc(nz * sizeof(double));
+        for (int i = 0; i < M + 1; i++) {
+            IRP[i] = 0;
+        }
         for (int i = 0; i < nz; i++) {
             IRP[I[i] + 1]++;
         }
