@@ -1,0 +1,30 @@
+#!/bin/bash
+
+#PBS -N cuda
+
+#PBS -l select=1:ncpus=1:mpiprocs=1:ngpus=1
+
+#PBS -q gpu
+#PBS -l walltime=1:00:00
+
+#PBS -M hans.haller.885@cranfield.ac.uk
+
+#PBS -j oe
+#PBS -v "CUDA_VISIBLE_DEVICES="
+#PBS -W sandbox=PRIVATE
+#PBS -V
+#PBS -m abe
+#PBS -k n
+
+ln -s $PWD $PBS_O_WORKDIR/$PBS_JOBID
+cd $PBS_O_WORKDIR
+
+echo CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES
+
+cpus=`cat $PBS_NODEFILE | wc -l`
+gpus=`echo $CUDA_VISIBLE_DEVICES|awk -F"," '{print NF}'`
+
+/scratch/s388885/sspp/sspp-assignment/cuda/matvec/cuda "/scratch/s388885/sspp/sspp-assignment/src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx" "ALL"
+##/scratch/s388885/sspp/sspp-assignment/cuda/matvec/cuda "/scratch/s388885/sspp/sspp-assignment/src/data/input/cage4/cage4.mtx" "ALL"
+
+/bin/rm -f $PBS_JOBID

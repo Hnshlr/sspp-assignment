@@ -1,0 +1,1 @@
+/apps/software/GCCcore/8.3.0/bin/c++  -O3  -rdynamic CMakeFiles/matrix_vector_1d_block.dir/matrix_vector_1d_block_generated_02-matrix_vector_1d_block.cu.o  -o matrix_vector_1d_block -Wl,-Bstatic -lcudart_static -Wl,-Bdynamic -lpthread -ldl -lrt 

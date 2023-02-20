@@ -1,0 +1,1 @@
+cuda_add_executable(cuda cuda.cu mmio.h mmio.c)

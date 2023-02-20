@@ -1,0 +1,1 @@
+/apps/software/GCCcore/8.3.0/bin/c++  -O3  -rdynamic CMakeFiles/matrix_vector_1thread.dir/matrix_vector_1thread_generated_01-matrix_vector_1thread.cu.o  -o matrix_vector_1thread -Wl,-Bstatic -lcudart_static -Wl,-Bdynamic -lpthread -ldl -lrt 
