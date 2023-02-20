@@ -1,77 +1,10 @@
+// INCLUDES:
 #include <omp.h>
 #include <random>
 #include <tuple>
-
 #include "src/mmio.h"
 
-//// TEMP: DEBUG PURPOSES FUNCTIONS:
-void print_list(int nz, int *I, int *J, double *val) {
-    int i;
-    for (i=0; i<nz; i++) {
-        printf("%d %d %20.19g\n", I[i] + 1, J[i] + 1, val[i]);
-    }
-}
-void print_IRP(int M, int *IRP) {
-    printf("IRP=[");
-    for (int i = 0; i < M+1; i++) {
-        printf("%d ", IRP[i]);
-    }
-    printf("]\n");
-}
-void print_JA(int nz, int *JA) {
-    printf("JA=[");
-    for (int i = 0; i < nz; i++) {
-        printf("%d ", JA[i]);
-    }
-    printf("]\n");
-}
-void print_AS(int nz, double *AS) {
-    printf("AS=[");
-    for (int i = 0; i < nz; i++) {
-        printf("%.2f ", AS[i]);
-    }
-    printf("]\n");
-}
-void print_matrix_using_arrays(int M, int N, int nz, const int *I, const int *J, const double *val) {
-    printf("M=%d, N=%d, nz=%d\n", M, N, nz);
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            double vall = 0.0;
-            for (int k = 0; k < nz; k++) {
-                if (I[k] == i && J[k] == j) {
-                    vall = val[k];
-                    break;
-                }
-            }
-            printf("%.2f ", vall);
-        }
-        printf("\n");
-    }
-}
-void print_matrix(int M, int N, double **matrix) {
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            printf("%.2f ", matrix[i][j]);
-        }
-        printf("\n");
-    }
-}
-void print_matrix_using_CSR(int M, int N, int nz, const int *IRP, const int *JA, const double *AS) {
-    printf("M=%d, N=%d, nz=%d\n", M, N, nz);
-    for (int i = 0; i < M; i++) {
-        for (int j = 0; j < N; j++) {
-            double val = 0.0;
-            for (int k = IRP[i]; k < IRP[i+1]; k++) {
-                if (JA[k] == j) {
-                    val = AS[k];
-                    break;
-                }
-            }
-            printf("%.2f ", val);
-        }
-        printf("\n");
-    }
-}
+// FUNCTIONS:
 double** build_matrix(int M, int N, int nz, const int *I, const int *J, const double *val) {
     auto** matrix = new double*[M];
     for (int i = 0; i < M; i++) {
@@ -84,20 +17,6 @@ double** build_matrix(int M, int N, int nz, const int *I, const int *J, const do
         matrix[I[i]][J[i]] = val[i];
     }
     return matrix;
-}
-void verifyResults(const double *result1, const double *result2, int size) {
-    bool areEqual = true;
-    for (int i = 0; i < size; i++) {
-        if (fabs(result1[i] - result2[i]) > 0.0001) {
-            areEqual = false;
-            break;
-        }
-    }
-    if (areEqual) {
-        printf("RESULTS ARE EQUAL!\n");
-    } else {
-        printf("RESULTS ARE NOT EQUAL!\n");
-    }
 }
 std::tuple<double, double> maxAndRelDiffs(const double *result1, const double *result2, int size) {
     double maxDiff = 0.0;
@@ -113,7 +32,6 @@ std::tuple<double, double> maxAndRelDiffs(const double *result1, const double *r
     }
     return std::make_tuple(maxDiff, relDiff);
 }
-//// END OF TEMP: DEBUG PURPOSES FUNCTIONS.
 
 // RUN FRONTEND: ./a.out "src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx" "CSR"
 
