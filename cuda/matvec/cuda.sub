@@ -25,6 +25,6 @@ cpus=`cat $PBS_NODEFILE | wc -l`
 gpus=`echo $CUDA_VISIBLE_DEVICES|awk -F"," '{print NF}'`
 
 /scratch/s388885/sspp/sspp-assignment/cuda/matvec/cuda "/scratch/s388885/sspp/sspp-assignment/src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx" "ALL"
-##/scratch/s388885/sspp/sspp-assignment/cuda/matvec/cuda "/scratch/s388885/sspp/sspp-assignment/src/data/input/cage4/cage4.mtx" "ALL"
+/scratch/s388885/sspp/sspp-assignment/cuda/matvec/cuda "/scratch/s388885/sspp/sspp-assignment/src/data/input/cage4/cage4.mtx" "ALL"
 
 /bin/rm -f $PBS_JOBID

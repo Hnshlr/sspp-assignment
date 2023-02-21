@@ -37,11 +37,11 @@ std::tuple<double, double> maxAndRelDiffs(const double *result1, const double *r
 
 int main(int argc, char *argv[]) {
     //// DEBUG PURPOSES:
-//    char* path_cage4 = "../src/data/input/cage4/cage4.mtx";
-//    char* path_cubecoup = "../src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx";
-//    argc+=2;                        // TEMP
-//    argv[1] = path_cubecoup;        // TEMP
-//    argv[2] = "ALL";            // TEMP
+    char* path_cage4 = "../src/data/input/cage4/cage4.mtx";
+    char* path_cubecoup = "../src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx";
+    argc+=2;                        // TEMP
+    argv[1] = path_cubecoup;        // TEMP
+    argv[2] = "ALL";            // TEMP
     //// END OF DEBUG PURPOSES.
 
     // MATRIX SETTINGS:
