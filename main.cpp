@@ -156,9 +156,6 @@ int main(int argc, char *argv[]) {
             int *IRP = new int[M + 1]();
             int *JA = new int[nz]();
             auto *AS = new double[nz]();
-            for (int i = 0; i < M + 1; i++) {
-                IRP[i] = 0;
-            }
             for (int i = 0; i < nz; i++) {
                 IRP[I[i] + 1]++;
             }
@@ -652,7 +649,6 @@ int main(int argc, char *argv[]) {
         if (optype == "ellpack" || optype == "all") {
             int max_row_length = 0;
             int *max_row_lengths = new int[M]();
-            // Find the maximum row length, which is the max number of non-zero elements in a row, using I, J and val; sorted by J:
             for (int i = 0; i < nz; i++) {
                 max_row_lengths[I[i]]++;
             }
