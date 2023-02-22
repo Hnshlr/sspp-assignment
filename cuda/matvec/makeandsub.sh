@@ -1,1 +1,0 @@
-make cuda && qsub cuda.sub && clear && qstat -a && ls

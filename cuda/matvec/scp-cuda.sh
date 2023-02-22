@@ -1,1 +1,0 @@
-scp -r ./cuda.cu ./cuda.sub s388885@crescent.central.cranfield.ac.uk:/scratch/s388885/sspp/sspp-assignment/cuda/matvec/

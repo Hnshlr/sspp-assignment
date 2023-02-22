@@ -1,0 +1,1 @@
+cd /scratch/s388885/sspp/sspp-assignment && ./scripts/cuda-compile.sh && cd jobs && qsub ../queues/cuda.sub && clear && qstat -a && ls

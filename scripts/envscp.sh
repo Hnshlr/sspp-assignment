@@ -1,0 +1,2 @@
+# SETUP ENVIRONMENT THRU SCP:
+scp -r ../cmake-build-debug ../cuda ../jobs ../queues ../scripts ../src/mmio.c ../src/mmio.h ../main.cpp ../CMakeLists.txt ../README.md s388885@crescent.central.cranfield.ac.uk:/scratch/s388885/sspp/sspp-assignment
