@@ -5,8 +5,9 @@
 #PBS -l select=1:ncpus=1:mpiprocs=1
 
 ##PBS -q gpu
+#PBS -q one_day
 
-#PBS -m abe 
+#PBS -m abe
 #PBS -M hans.haller.885@cranfield.ac.uk
 
 #PBS -j oe
@@ -24,9 +25,10 @@ export CXX=$(which g++)
 
 export OMP_NUM_THREADS=16
 
-for k in 1 2 3 4
-do
-    /scratch/s388885/sspp/sspp-assignment/a.out /scratch/s388885/sspp/sspp-assignment/src/data/input/Cube_Coup_dt0/Cube_Coup_dt0.mtx ALL
+mtx_dir="/scratch/s388885/sspp/sspp-assignment/src/data/input"
+
+for mtx_file in ${mtx_dir}/*.mtx; do
+    /scratch/s388885/sspp/sspp-assignment/a.out ${mtx_file} "ALL"
 done
 
 #
