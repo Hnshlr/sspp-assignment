@@ -157,9 +157,7 @@ int main(int argc, char** argv) {
     // SETTINGS (ANNOUNCEMENT):
     std::string matrix_name = argv[1];
     matrix_name = matrix_name.substr(matrix_name.find_last_of("/\\") + 1);
-//    printf("SETTINGS = { LIBRARY=CUDA, OP=Mat/Vec, MATRIX=\"%s\", SIZE=%dx%d }\n", matrix_name.c_str(), M, N);
     std::cout << "SETTINGS = { LIBRARY=CUDA, OP=Mat/Vec, MATRIX=\"" << matrix_name << "\", SIZE=" << M << "x" << N << " }" << std::endl;
-
 
     // CONSTRUCT MATRIX:
     // ALLOCATE MEMORY FOR THE SPARSE MATRIX:
@@ -168,15 +166,27 @@ int main(int argc, char** argv) {
     val = (double *) malloc(2*nz * sizeof(double));
     // READ THE SPARSE MATRIX, AND REMOVE THE REMAINING ZEROES:
     int lineCounter = 0;
-    while (fscanf(f, "%d %d %lg\n", &I[lineCounter], &J[lineCounter], &val[lineCounter]) != EOF) {
-        I[lineCounter]--;  /* adjust from 1-based to 0-based */
-        J[lineCounter]--;
-        lineCounter++;
+    // CASE: IF THE MATRIX IS A PATTERN:
+    if (!mm_is_pattern(matcode)) {
+        while (fscanf(f, "%d %d %lg\n", &I[lineCounter], &J[lineCounter], &val[lineCounter]) != EOF) {
+            I[lineCounter]--;
+            J[lineCounter]--;
+            lineCounter++;
+        }
+    }
+    else {
+        while (fscanf(f, "%d %d\n", &I[lineCounter], &J[lineCounter]) != EOF) {
+            I[lineCounter]--;
+            J[lineCounter]--;
+            val[lineCounter] = 1.0;
+            lineCounter++;
+        }
     }
     nz = lineCounter;
     I = (int *) realloc(I, 2*nz * sizeof(int));
     J = (int *) realloc(J, 2*nz * sizeof(int));
     val = (double *) realloc(val, 2*nz * sizeof(double));
+    // CASE: IF THE MATRIX IS SYMMETRIC:
     if(mm_is_symmetric(matcode)) {
         int symmCounter = 0;
         for (int i = 0; i < nz; i++) {
@@ -196,7 +206,7 @@ int main(int argc, char** argv) {
 
     // CONSTRUCT RANDOM VECTOR:
     int *vector = (int *) malloc(M * sizeof(int));
-    // Fill the vector with random numbers, using C++11 random library:
+    // FILL THE VECTOR WITH RANDOM NUMBERS, USING C++11 RANDOM LIBRARY:
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 10);

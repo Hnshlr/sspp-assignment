@@ -90,15 +90,21 @@ int main(int argc, char *argv[]) {
     val = (double *) malloc(2*nz * sizeof(double));
     // READ THE SPARSE MATRIX, AND REMOVE THE REMAINING ZEROES:
     int lineCounter = 0;
-    while (fscanf(f, "%d %d %lg\n", &I[lineCounter], &J[lineCounter], &val[lineCounter]) != EOF) {
-//        if (val[lineCounter] != 0) {
-//            I[lineCounter]--;  /* adjust from 1-based to 0-based */
-//            J[lineCounter]--;
-//            lineCounter++;
-//        } // TODO: Fix to remove non-zeroes elements.
-        I[lineCounter]--;  /* adjust from 1-based to 0-based */
-        J[lineCounter]--;
-        lineCounter++;
+    // CASE: IF THE MATRIX IS A PATTERN:
+    if (!mm_is_pattern(matcode)) {
+        while (fscanf(f, "%d %d %lg\n", &I[lineCounter], &J[lineCounter], &val[lineCounter]) != EOF) {
+            I[lineCounter]--;
+            J[lineCounter]--;
+            lineCounter++;
+        }
+    }
+    else {
+        while (fscanf(f, "%d %d\n", &I[lineCounter], &J[lineCounter]) != EOF) {
+            I[lineCounter]--;
+            J[lineCounter]--;
+            val[lineCounter] = 1.0;
+            lineCounter++;
+        }
     }
     nz = lineCounter;
     I = (int *) realloc(I, 2*nz * sizeof(int));
@@ -123,7 +129,7 @@ int main(int argc, char *argv[]) {
 
     // CONSTRUCT RANDOM VECTOR:
     int *vector = (int *) malloc(M * sizeof(int));
-    // Fill the vector with random numbers, using C++11 random library:
+    // FILL THE VECTOR WITH RANDOM NUMBERS, USING C++11 RANDOM LIBRARY:
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 10);
