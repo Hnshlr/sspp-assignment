@@ -19,11 +19,20 @@
 ln -s $PWD $PBS_O_WORKDIR/$PBS_JOBID
 cd $PBS_O_WORKDIR
 
+module load fosscuda/2019b
+module load CMake/3.15.3-GCCcore-8.3.0
+
 echo CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES
 
 cpus=`cat $PBS_NODEFILE | wc -l`
 gpus=`echo $CUDA_VISIBLE_DEVICES|awk -F"," '{print NF}'`
 
-/scratch/s388885/sspp/sspp-assignment/cuda/matvec/cuda "/scratch/s388885/sspp/sspp-assignment/src/data/input/Cube_Coup_dt0.mtx" "ALL"
+##/scratch/s388885/sspp/sspp-assignment/cuda/matvec/cuda "/scratch/s388885/sspp/sspp-assignment/src/data/input/Cube_Coup_dt0.mtx" "ALL"
+
+mtx_dir="/scratch/s388885/sspp/sspp-assignment/src/data/input"
+
+for mtx_file in ${mtx_dir}/*.mtx; do
+    /scratch/s388885/sspp/sspp-assignment/cuda/matvec/cuda ${mtx_file} "ALL"
+done
 
 /bin/rm -f $PBS_JOBID

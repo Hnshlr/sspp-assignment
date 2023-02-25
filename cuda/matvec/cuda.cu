@@ -1,15 +1,19 @@
 #include <iostream>
+#include <algorithm>
 #include <random>
+#include <fstream>
+#include <vector>
 #include <cuda_runtime.h>  // For CUDA runtime API
 #include <helper_cuda.h>  // For checkCudaError macro
 #include <helper_timer.h>  // For CUDA SDK timers
 #include "mmio.h"
 
-#define BDIM 1024
-#define XBD 32
-#define YBD 32
-const dim3 BLOCK_DIM(BDIM);
-const dim3 BLOCK_DIM2(XBD,YBD);
+//#define BDIM 1024
+#define XBD 16
+#define YBD 8
+
+//const dim3 BLOCK_DIM(BDIM);
+const dim3 BLOCK_DIM2D(XBD,YBD);
 
 double** build_matrix(int M, int N, int nz, const int *I, const int *J, const double *val) {
     auto** matrix = new double*[M];
@@ -210,20 +214,17 @@ int main(int argc, char** argv) {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<> dis(0, 10);
-    for (int i = 0; i < M; i++) {
-        vector[i] = dis(gen);
-    }
+    for (int i = 0; i < M; i++) vector[i] = dis(gen);
 
     // ______________________________________________________________________________________________________________ //
 
+    std::string results = "serialCSR,parallelCSR,serialELLPACK,parallelELLPACK\n";
+
     // METHOD 1: CSR:
     if ((optype == "csr") || (optype == "all")) {
-        int *IRP = (int *) malloc((M + 1) * sizeof(int));
-        int *JA = (int *) malloc(nz * sizeof(int));
-        auto *AS = (double *) malloc(nz * sizeof(double));
-        for (int i = 0; i < M + 1; i++) {
-            IRP[i] = 0;
-        }
+        int *IRP = new int[M + 1]();
+        int *JA = new int[nz]();
+        auto *AS = new double[nz]();
         for (int i = 0; i < nz; i++) {
             IRP[I[i] + 1]++;
         }
@@ -245,13 +246,13 @@ int main(int argc, char** argv) {
         // COMPUTATION:
         // METHOD 1-0: SERIAL CSR:
         int row, col;
-        auto *serial_csr_result = (double *) malloc(M * sizeof(double));
-        auto *csr_result = (double *) malloc(M * sizeof(double));
+        auto *serial_csr_result = new double[M];
+        auto *csr_result = new double[M];
         StopWatchInterface *timer = 0;
         sdkCreateTimer(&timer);
         timer->start();
         for (row = 0; row < M; row++) {
-            double sum = 0;
+            double sum = 0.0;
             for (int i = IRP[row]; i < IRP[row + 1]; i++) {
                 col = JA[i];
                 sum += AS[i] * vector[col];
@@ -259,11 +260,10 @@ int main(int argc, char** argv) {
             serial_csr_result[row] = sum;
         }
         timer->stop();
-        double time = timer->getTime() / 1000.0;
-        double gflops = 2.0 * nz / time / 1e9;
-        //    printf("RESULTS = { METHOD=serial, FORMAT=CSR, TIME=%f, GFLOPS=%f }\n", time, gflops);
-        std::cout << "RESULTS = { METHOD=serial, FORMAT=CSR, TIME=" << time << ", GFLOPS=" << gflops << " }"
-                  << std::endl;
+        double serial_csr_time = timer->getTime() / 1000.0;
+        double serial_csr_gflops = 2.0 * nz / serial_csr_time / 1e9;
+        std::cout << "RESULTS = { METHOD=serial, FORMAT=CSR, TIME=" << serial_csr_time << ", GFLOPS=" << serial_csr_gflops << " }" << std::endl;
+        results += std::to_string(serial_csr_gflops) + ",";
 
         // ______________________________________________________________________________________________________________ //
 
@@ -282,19 +282,14 @@ int main(int argc, char** argv) {
         checkCudaErrors(cudaMemcpy(d_AS, AS, nz * sizeof(double), cudaMemcpyHostToDevice));
         checkCudaErrors(cudaMemcpy(d_vector, vector, M * sizeof(int), cudaMemcpyHostToDevice));
         // COMPUTE THE MATRIX-VECTOR PRODUCT:
-        // CALCULATE THE GRID DIMENSION. A 1D GRID SUFFICES:
-        // Since there are M rows to compute, we need M threads. Each thread will compute one row.
-        // Each block is of dimension BLOCK_DIM.x * 1. We need (M + BLOCK_DIM.x - 1) / BLOCK_DIM.x blocks.
-        const dim3 GRID_DIM((M + BLOCK_DIM.x - 1) / BLOCK_DIM.x, 1);
-        const dim3 GRID_DIM2((M + BLOCK_DIM2.y - 1) / BLOCK_DIM2.y, 1);
+        const dim3 GRID_DIM2D((M + BLOCK_DIM2D.y - 1) / BLOCK_DIM2D.y, 1);
         timer->reset();
         timer->start();
-//        csr_kernel <<< GRID_DIM, BLOCK_DIM >>>(d_IRP, d_JA, d_AS, d_vector, d_csr_result, M, nz);
-        csr_kernel_2d <<< GRID_DIM2, BLOCK_DIM2 >>>(d_IRP, d_JA, d_AS, d_vector, d_csr_result, M, nz);
+        csr_kernel_2d <<< GRID_DIM2D, BLOCK_DIM2D >>>(d_IRP, d_JA, d_AS, d_vector, d_csr_result, M, nz);
         checkCudaErrors(cudaDeviceSynchronize());
         timer->stop();
-        time = timer->getTime() / 1000.0;
-        gflops = 2.0 * nz / time / 1e9;
+        double time = timer->getTime() / 1000.0;
+        double gflops = 2.0 * nz / time / 1e9;
         // COPY THE RESULT BACK TO THE CPU:
         checkCudaErrors(cudaMemcpy(csr_result, d_csr_result, M * sizeof(double), cudaMemcpyDeviceToHost));
         // MAX AND REL DIFF:
@@ -306,18 +301,14 @@ int main(int argc, char** argv) {
             relDiff = std::max(relDiff, std::abs(serial_csr_result[row] - csr_result[row]) / maxAbs);
             maxDiff = std::max(maxDiff, std::abs(serial_csr_result[row] - csr_result[row]));
         }
-        std::cout << "RESULTS = { METHOD=cuda, FORMAT=CSR, TIME=" << time << ", GFLOPS=" << gflops << ", MAX_DIFF="
-                  << maxDiff << ", REL_DIFF=" << relDiff << " }" << std::endl;
+        std::cout << "RESULTS = { METHOD=cuda2Dblocks, XBDIM=" << BLOCK_DIM2D.x << ", YBDIM=" << BLOCK_DIM2D.y << ", FORMAT=CSR, TIME=" << time << ", GFLOPS=" << gflops << ", MAXDIFF=" << maxDiff << ", RELDIFF=" << relDiff << " }" << std::endl;
+        results += std::to_string(gflops) + ",";
         // FREE THE GPU MEMORY:
         checkCudaErrors(cudaFree(d_IRP));
         checkCudaErrors(cudaFree(d_JA));
         checkCudaErrors(cudaFree(d_AS));
         checkCudaErrors(cudaFree(d_vector));
         checkCudaErrors(cudaFree(d_csr_result));
-        // FREE THE CPU MEMORY:
-        free(IRP);
-        free(JA);
-        free(AS);
     }
 
     // ______________________________________________________________________________________________________________ //
@@ -325,11 +316,7 @@ int main(int argc, char** argv) {
     // METHOD 2: ELLPACK:
     if (optype == "ellpack" || optype == "all") {
         int max_row_length = 0;
-        int *max_row_lengths = (int *) malloc(M * sizeof(int));
-        for (int i = 0; i < M; i++) {
-            max_row_lengths[i] = 0;
-        }
-        // Find the maximum row length, which is the max number of non-zero elements in a row, using I, J and val; sorted by J:
+        int *max_row_lengths = new int[M]();
         for (int i = 0; i < nz; i++) {
             max_row_lengths[I[i]]++;
         }
@@ -338,24 +325,15 @@ int main(int argc, char** argv) {
                 max_row_length = max_row_lengths[i];
             }
         }
-        int **JA = (int **) malloc(M * sizeof(int *));
+        int **JA = new int *[M];
         for (int i = 0; i < M; i++) {
-            JA[i] = (int *) malloc(max_row_length * sizeof(int));
-            for (int j = 0; j < max_row_length; j++) {
-                JA[i][j] = 0;
-            }
+            JA[i] = new int[max_row_length]();
         }
-        auto **AS = (double **) malloc(M * sizeof(double *));
+        auto **AS = new double *[M];
         for (int i = 0; i < M; i++) {
-            AS[i] = (double *) malloc(max_row_length * sizeof(double));
-            for (int j = 0; j < max_row_length; j++) {
-                AS[i][j] = 0.0;
-            }
+            AS[i] = new double[max_row_length]();
         }
-        int *row_fill = (int *) malloc(M * sizeof(int));
-        for (int i = 0; i < M; i++) {
-            row_fill[i] = 0;
-        }
+        int *row_fill = new int[M]();
         int row, col;
         for (int i = 0; i < nz; i++) {
             row = I[i];
@@ -366,30 +344,30 @@ int main(int argc, char** argv) {
         }
 
         // METHOD 2-1: SERIAL ELLPACK:
-        auto *serial_ellpack_result = (double *) malloc(M * sizeof(double));
-        auto *ellpack_result = (double *) malloc(M * sizeof(double));
+        auto *serial_ellpack_result = new double[M];
+        auto *ellpack_result = new double[M];
         StopWatchInterface *timer = 0;
         sdkCreateTimer(&timer);
         timer->start();
         for (row = 0; row < M; row++) {
-            double sum = 0;
+            double sum = 0.0;
             for (int j = 0; j < max_row_length; j++) {
-                sum = sum + AS[row][j] * vector[JA[row][j]];
+                sum += AS[row][j] * vector[JA[row][j]];
             }
             serial_ellpack_result[row] = sum;
         }
         timer->stop();
-        double time = timer->getTime() / 1000.0;
-        double gflops = 2.0 * nz / (time * 1e9);
-        std::cout << "RESULTS = { METHOD=serial, FORMAT=ELLPACK, TIME=" << time << ", GFLOPS=" << gflops << " }" << std::endl;
-
+        double serial_ellpack_time = timer->getTime() / 1000.0;
+        double serial_ellpack_gflops = 2.0 * nz / (serial_ellpack_time * 1e9);
+        std::cout << "RESULTS = { METHOD=serial, FORMAT=ELLPACK, TIME=" << serial_ellpack_time << ", GFLOPS=" << serial_ellpack_gflops << " }" << std::endl;
+        results += std::to_string(serial_ellpack_gflops) + ",";
 
         // METHOD 2-2: CUDA ELLPACK:
         int *d_JA, *d_vector;
         double *d_AS, *d_ellpack_result;
         // FLATTEN JA AND AS:
-        int *JA_flat = (int *) malloc(M * max_row_length * sizeof(int));
-        double *AS_flat = (double *) malloc(M * max_row_length * sizeof(double));
+        int *JA_flat = new int[M * max_row_length];
+        double *AS_flat = new double[M * max_row_length];
         for (int i = 0; i < M; i++) {
             for (int j = 0; j < max_row_length; j++) {
                 JA_flat[i * max_row_length + j] = JA[i][j];
@@ -405,16 +383,14 @@ int main(int argc, char** argv) {
         checkCudaErrors(cudaMemcpy(d_AS, AS_flat, M * max_row_length * sizeof(double), cudaMemcpyHostToDevice));
         checkCudaErrors(cudaMemcpy(d_vector, vector, M * sizeof(int), cudaMemcpyHostToDevice));
         // CALCULATE THE GRID DIMENSION. A 1D GRID SUFFICES:
-//        const dim3 GRID_DIM((M + BLOCK_DIM.x - 1) / BLOCK_DIM.x, 1);
-        const dim3 GRID_DIM2((M + BLOCK_DIM2.y - 1) / BLOCK_DIM2.y, 1);
+        const dim3 GRID_DIM2D((M + BLOCK_DIM2D.y - 1) / BLOCK_DIM2D.y, 1);
         timer->reset();
         timer->start();
-//        ellpack_kernel <<< GRID_DIM, BLOCK_DIM >>>(d_JA, d_AS, d_vector, d_ellpack_result, M, max_row_length);
-        ellpack_kernel_2d <<< GRID_DIM2, BLOCK_DIM2 >>>(d_JA, d_AS, d_vector, d_ellpack_result, M, max_row_length);
+        ellpack_kernel_2d <<< GRID_DIM2D, BLOCK_DIM2D >>>(d_JA, d_AS, d_vector, d_ellpack_result, M, max_row_length);
         checkCudaErrors(cudaDeviceSynchronize());
         timer->stop();
-        time = timer->getTime() / 1000.0;
-        gflops = 2.0 * nz / time / 1e9;
+        double time = timer->getTime() / 1000.0;
+        double gflops = 2.0 * nz / time / 1e9;
         // COPY THE RESULT BACK TO THE CPU:
         checkCudaErrors(cudaMemcpy(ellpack_result, d_ellpack_result, M * sizeof(double), cudaMemcpyDeviceToHost));
         // MAX AND REL DIFF:
@@ -426,12 +402,22 @@ int main(int argc, char** argv) {
             relDiff = std::max(relDiff, std::abs(serial_ellpack_result[row] - ellpack_result[row]) / maxAbs);
             maxDiff = std::max(maxDiff, std::abs(serial_ellpack_result[row] - ellpack_result[row]));
         }
-        std::cout << "RESULTS = { METHOD=cuda, FORMAT=ELLPACK, TIME=" << time << ", GFLOPS=" << gflops << ", MAX_DIFF=" << maxDiff << ", REL_DIFF=" << relDiff << " }" << std::endl;
+        std::cout << "RESULTS = { METHOD=cuda2Dblocks, XBDIM=" << BLOCK_DIM2D.x << ", YBDIM=" << BLOCK_DIM2D.y << ", FORMAT=ELLPACK, TIME=" << time << ", GFLOPS=" << gflops << ", MAXDIFF=" << maxDiff << ", RELDIFF=" << relDiff << " }" << std::endl;
+        results += std::to_string(gflops) + "\n";
         // FREE THE GPU MEMORY:
         checkCudaErrors(cudaFree(d_JA));
         checkCudaErrors(cudaFree(d_AS));
         checkCudaErrors(cudaFree(d_vector));
         checkCudaErrors(cudaFree(d_ellpack_result));
+    }
+
+    // WRITE:
+    if (optype == "all") {
+        std::ofstream file;
+        std::transform(matrix_name.begin(), matrix_name.end(), matrix_name.begin(), ::toupper);
+        file.open("CUDA_RESULTS_" + matrix_name + ".csv");
+        file << results;
+        file.close();
     }
 
     return 0;

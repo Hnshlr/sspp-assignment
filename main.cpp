@@ -41,9 +41,9 @@ int main(int argc, char *argv[]) {
     //// DEBUG PURPOSES:
 //    char* path_cage4 = "../src/data/input/cage4.mtx";
 //    char* path_cubecoup = "../src/data/input/Cube_Coup_dt0.mtx";
-//    char* path_adder_dcop = "../src/data/input/adder_dcop_32.mtx";
+//    char* path_amazon = "../src/data/input/amazon0302.mtx";
 //    argc+=2;                        // TEMP
-//    argv[1] = path_cage4;        // TEMP
+//    argv[1] = path_amazon;        // TEMP
 //    argv[2] = "ALL";            // TEMP
     //// END OF DEBUG PURPOSES.
 
@@ -110,6 +110,7 @@ int main(int argc, char *argv[]) {
     I = (int *) realloc(I, 2*nz * sizeof(int));
     J = (int *) realloc(J, 2*nz * sizeof(int));
     val = (double *) realloc(val, 2*nz * sizeof(double));
+    // CASE: IF THE MATRIX IS SYMMETRIC:
     if(mm_is_symmetric(matcode)) {
         int symmCounter = 0;
         for (int i = 0; i < nz; i++) {
