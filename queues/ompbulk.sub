@@ -25,6 +25,10 @@ export CXX=$(which g++)
 
 export OMP_NUM_THREADS=16
 
-/scratch/s388885/sspp/sspp-assignment/a.out /scratch/s388885/sspp/sspp-assignment/src/data/input/Cube_Coup_dt0.mtx "ALL"
+mtx_dir="/scratch/s388885/sspp/sspp-assignment/src/data/input"
+
+for mtx_file in ${mtx_dir}/*.mtx; do
+    /scratch/s388885/sspp/sspp-assignment/a.out ${mtx_file} "ALL"
+done
 
 /bin/rm -f $PBS_JOBID
